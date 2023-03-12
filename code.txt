@@ -1,0 +1,76 @@
+*code 1
+
+clear 
+X=xlsread('gy1.xlsx','2017','B2:AE4'); %投入
+Y=xlsread('gy1.xlsx','2017','B5:AE5'); %期望产出
+Z=xlsread('gy1.xlsx','2017','B6:AE6'); %非期望产出
+C=xlsread('gy1.xlsx','2017','B9:AE9'); %平均交叉效率
+n=size(X',1);m=size(X,1);s=size(Y,1);t=size(Z,1);
+F=abs(-C);
+a=sum(F>=0.0001);
+for k=1:n
+    if a~=0
+       for i=1:n
+           Aeq=[X(:,i)' zeros(1,s) zeros(1,t)]; beq=1;
+           A=[-X' Y' Z'; C(i)*X(:,i)' -Y(:,i)' -Z(:,i)'];
+           b=[zeros(n,1); 0];
+           LB=zeros(m+s+t,1);UB=[];
+           f=[zeros(1,m) -Y(:,i)' -Z(:,i)'];
+           w(:,i)=linprog(f,A,b,Aeq,beq,LB,UB); 
+           Eii=Y(:,i)'*w(m+1:m+s,i)+Z(:,i)'*w(m+s+1:m+s+t,i); 
+              for k=1:n
+                  f=[zeros(1,m) -Y(:,k)' -Z(:,k)'];
+                  A=[-X' Y' Z'; C(k)*X(:,k)' -Y(:,k)' -Z(:,k)']; 
+                  b=[zeros(n,1); 1];
+                  Aeq=[X(:,k)' zeros(1,s) zeros(1,t); Eii*X(:,i)' -Y(:,i)' -Z(:,i)'];
+                  beq=[1;0];
+                  LB=zeros(m+s+t,1);UB=[];
+                  v=linprog(f,A,b,Aeq,beq,LB,UB); 
+                  E(i,k)=(Y(:,k)'*v(m+1:m+s)+Z(:,k)'*v(m+s+1:m+s+t))/(X(:,k)'*v(1:m));
+              end
+       end
+        for i=1:n 
+            Ee(i) = (E(i,i)+(sum(E(:,i))-E(i,i))/(n-1))/2;
+            EE(i) = E(i,i);
+        end
+       E;
+       mean(E); 
+       F=abs(Ee(i)-C);
+       a=sum(F>=0.0001);
+       C=Ee;
+    else
+    end
+
+
+
+*code 2
+clear
+X=xlsread('gy1.xlsx','2017','B2:AE4');% 投入
+Y=xlsread('gy1.xlsx','2017','B5:AE5');% 期望产出
+Z=xlsread('gy1.xlsx','2017','B6:AE6');% 非期望产出
+n=size(X',1);m=size(X,1);s=size(Y,1);t=size(Z,1);
+A=[-X' Y' Z']; b=zeros(n,1);
+LB=zeros(m+s+t,1);UB=[];
+for i=1:n
+    Aeq=[X(:,i)' zeros(1,s) zeros(1,t)]; beq=1;
+    f=[zeros(1,m) -Y(:,i)' -Z(:,i)'];
+    w(:,i)=linprog(f,A,b,Aeq,beq,LB,UB); 
+    Eii=Y(:,i)'*w(m+1:m+s,i)+ Z(:,i)'*w(m+s+1:m+s+t,i); 
+    for k=1:n 
+         f=[zeros(1,m) -Y(:,k)' -Z(:,k)'];
+         Aeq=[X(:,k)' zeros(1,s) zeros(1,t); Eii*X(:,i)' -Y(:,i)' -Z(:,i)'];
+         beq=[1;0];
+         v=linprog(f,A,b,Aeq,beq,LB,UB); 
+         E(i,k)=(Y(:,k)'*v(m+1:m+s) +Z(:,k)'*v(m+s+1:m+s+t))/(X(:,k)'*v(1:m)); 
+    end
+	
+end
+for i=1:n 
+    Ee(i) = (E(i,i)+(sum(E(:,i))-E(i,i))/(n-1))/2;
+    EE(i) = E(i,i);
+end
+E
+mean( E)
+xlswrite('gy1.xlsx',mean(E),'2017','B8:AE8')
+xlswrite('gy1.xlsx',Ee,'2017','B9:AE9')
+
